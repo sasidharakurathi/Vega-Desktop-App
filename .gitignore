@@ -1,0 +1,29 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+*.log
+
+# --- Node.js ---
+node_modules/
+dist/
+out/
+.npm
+
+# --- Configuration & Secrets ---
+config.json
+.env
+keys/
+secrets/
+
+# --- System & IDE ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# --- Screenshots ---
+screenshot_*.png

@@ -1,0 +1,15 @@
+Flask
+flask-cors
+psutil
+openai-whisper
+numpy
+SpeechRecognition
+flask-socketio
+torch
+
+edge-tts
+pygame
+thefuzz
+pyautogui
+pygetwindow
+screen_brightness_control

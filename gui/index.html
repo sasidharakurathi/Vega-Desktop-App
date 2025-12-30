@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>NEON SYSTEM HUD 
+    <link href="https:
+    <script src="https:
+    
+    <style>
+        :root {
+            --cyan: #00f3ff;
+            --cyan-dim: rgba(0, 243, 255, 0.1);
+            --blue: #0066ff;
+            --pink: #ff0055;
+            --orange: #ffcc00;
+            --red: #ff2a2a;
+            --bg-dark: #020408;
+            --glass: rgba(10, 20, 30, 0.85);
+            --font-main: 'Rajdhani', sans-serif;
+            --font-mono: 'Consolas', 'Monaco', monospace;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            background-color: rgba(0, 0, 0, 0.8);
+            background-image: 
+                radial-gradient(circle at center, #051020 0%, #000 90%),
+                linear-gradient(rgba(0, 243, 255, 0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 243, 255, 0.02) 1px, transparent 1px);
+            background-size: 100% 100%, 40px 40px, 40px 40px;
+            color: var(--cyan);
+            font-family: var(--font-main);
+            margin: 0;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            perspective: 1000px;
+            transition: background-color 0.5s ease;
+        }
+
+        body::after {
+            content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: repeating-linear-gradient(0deg, transparent 0px, transparent 2px, rgba(0, 243, 255, 0.03) 3px);
+            pointer-events: none; z-index: 99;
+        }
+
+        .mini-hud {
+            display: none;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: transparent;
+            align-items: center; justify-content: center;
+            z-index: 9999;
+            -webkit-app-region: drag; 
+        }
+        
+        .mini-reactor-btn {
+            width: 80px; height: 80px;
+            border-radius: 50%;
+            background: rgba(0, 20, 40, 0.6);
+            border: 2px dashed var(--cyan);
+            box-shadow: 0 0 15px var(--cyan);
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer;
+            -webkit-app-region: no-drag;
+            animation: rotate-cw 10s infinite linear;
+            transition: all 0.3s ease;
+        }
+        
+        .mini-reactor-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 30px var(--cyan);
+            background: rgba(0, 243, 255, 0.1);
+        }
+
+        .mini-inner {
+            width: 60%; height: 60%;
+            border: 2px solid var(--cyan);
+            border-radius: 50%;
+            border-top: 2px solid transparent;
+            border-bottom: 2px solid transparent;
+            animation: rotate-ccw 2s infinite linear;
+            transition: border-color 0.3s ease;
+        }
+
+        .mini-reactor-btn.state-processing {
+            border-color: var(--orange);
+            box-shadow: 0 0 20px var(--orange);
+            animation-duration: 2s;
+        }
+        .mini-reactor-btn.state-processing .mini-inner { border-color: var(--orange); border-top-color: transparent; border-bottom-color: transparent; }
+        
+        .mini-reactor-btn.state-speaking {
+            border-color: var(--pink);
+            box-shadow: 0 0 25px var(--pink);
+        }
+        .mini-reactor-btn.state-speaking .mini-inner { border-color: var(--pink); border-top-color: transparent; border-bottom-color: transparent; }
+
+
+        .app-header {
+            position: absolute; top: 0; left: 0; width: 100%; height: 35px;
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0 10px;
+            z-index: 5000;
+            background: linear-gradient(to bottom, rgba(0, 243, 255, 0.1), transparent);
+            border-bottom: 1px solid rgba(0, 243, 255, 0.1);
+        }
+
+        .drag-region {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            -webkit-app-region: drag;
+            z-index: -1;
+        }
+
+        .header-title { font-size: 12px; letter-spacing: 2px; color: rgba(255,255,255,0.7); margin-left: 10px; pointer-events: none; }
+        .window-controls { display: flex; gap: 8px; -webkit-app-region: no-drag; }
+
+        .win-btn {
+            width: 30px; height: 22px; background: rgba(0, 243, 255, 0.1);
+            border: 1px solid rgba(0, 243, 255, 0.3); color: var(--cyan);
+            font-family: var(--font-main); font-size: 14px;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: all 0.2s ease;
+            clip-path: polygon(5px 0, 100% 0, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0 100%, 0 5px);
+        }
+        .win-btn:hover { background: var(--cyan); color: #000; box-shadow: 0 0 10px var(--cyan); }
+        .win-btn.close-btn:hover { background: var(--red); border-color: var(--red); color: #fff; box-shadow: 0 0 10px var(--red); }
+
+        .hud-wrapper {
+            width: 100vw; height: 100vh; 
+            margin: 0; 
+            display: grid;
+            grid-template-columns: 25vw 1fr 25vw;
+            grid-template-rows: 50px 1fr 60px;
+            gap: 20px; 
+            padding: 40px 10px 10px 10px;
+            transform-style: preserve-3d; overflow: hidden;
+        }
+
+        .top-bar {
+            grid-column: 1 / span 3; display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid rgba(0, 243, 255, 0.3); padding: 0 20px;
+            background: linear-gradient(90deg, transparent, rgba(0, 243, 255, 0.05), transparent); min-height: 0;
+        }
+        .top-item { font-size: 14px; letter-spacing: 2px; font-weight: 600; color: rgba(255,255,255,0.9); }
+        .top-item span { color: var(--cyan); margin-left: 5px; }
+
+        .panel-left { grid-row: 2; display: flex; flex-direction: column; transform: rotateY(10deg); transform-origin: left center; min-height: 0; overflow: hidden; }
+        .panel-right { grid-row: 2; display: grid; grid-template-rows: 1fr 1fr; gap: 20px; transform: rotateY(-10deg); transform-origin: right center; min-height: 0; overflow: hidden; }
+        .center-stage { grid-row: 2; grid-column: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; z-index: 10; min-height: 0; overflow: hidden; }
+
+        .footer-bar {
+            grid-row: 3; grid-column: 1 / span 3; border-top: 1px solid rgba(0, 243, 255, 0.3);
+            background: linear-gradient(90deg, transparent, rgba(0, 243, 255, 0.05), transparent);
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0 20px; font-size: 12px; letter-spacing: 1px; color: #8899aa;
+        }
+        .footer-section { display: flex; gap: 20px; }
+        .footer-item { display: flex; align-items: center; gap: 8px; }
+        .footer-item b { color: var(--cyan); }
+        .blink { animation: blinker 2s linear infinite; }
+        @keyframes blinker { 50% { opacity: 0; } }
+
+        .glass-panel {
+            background: var(--glass); border: 1px solid rgba(0, 243, 255, 0.3); backdrop-filter: blur(10px);
+            padding: 15px; position: relative;
+            clip-path: polygon(20px 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%, 0 20px);
+            transition: all 0.3s ease; display: flex; flex-direction: column; min-height: 0;
+        }
+        .glass-panel:hover { border-color: rgba(0, 243, 255, 0.6); box-shadow: inset 0 0 20px rgba(0, 243, 255, 0.1); }
+
+        .tech-header {
+            font-size: 14px; letter-spacing: 3px; font-weight: 700; color: #fff;
+            border-bottom: 2px solid var(--cyan); display: inline-block; padding-bottom: 5px; margin-bottom: 15px;
+            text-shadow: 0 0 5px var(--cyan); flex-shrink: 0;
+        }
+
+        .core-container {
+            width: 300px; height: 300px; position: relative; display: flex; align-items: center; justify-content: center;
+            margin-bottom: 40px; transition: transform 0.1s ease-out;
+        }
+        .core-outer-ring { position: absolute; width: 100%; height: 100%; border: 1px dashed var(--cyan); border-radius: 50%; animation: rotate-cw 20s linear infinite; opacity: 0.8; transition: border-color 0.5s; }
+        .core-mid-ring { position: absolute; width: 80%; height: 80%; border: 2px solid var(--cyan); border-radius: 50%; border-top-color: transparent; border-bottom-color: transparent; animation: rotate-ccw 10s linear infinite; box-shadow: 0 0 15px var(--cyan-dim); transition: border-color 0.5s, box-shadow 0.5s; }
+        .core-inner-ring { position: absolute; width: 60%; height: 60%; border: 5px solid var(--cyan-dim); border-radius: 50%; border-left: 5px solid var(--cyan); animation: rotate-cw 5s linear infinite; transition: border-color 0.5s; }
+        .core-nucleus { width: 50px; height: 50px; background: #fff; border-radius: 50%; box-shadow: 0 0 30px var(--cyan), 0 0 60px var(--cyan); animation: pulse-nucleus 3s ease-in-out infinite; z-index: 5; transition: background 0.5s, box-shadow 0.5s; }
+
+        .state-processing .core-outer-ring { border-color: var(--orange); animation-duration: 2s; }
+        .state-processing .core-mid-ring { border-color: var(--orange); border-top-color: transparent; border-bottom-color: transparent; animation-duration: 1.5s; box-shadow: 0 0 20px rgba(255, 200, 0, 0.4); }
+        .state-processing .core-inner-ring { border-left-color: var(--orange); animation-duration: 0.5s; }
+        .state-processing .core-nucleus { background: #ffeebb; box-shadow: 0 0 40px var(--orange); animation: pulse-fast 0.5s infinite; }
+        .state-speaking .core-outer-ring { border-color: var(--pink); opacity: 0.8; }
+        .state-speaking .core-mid-ring { border-color: var(--pink); border-top-color: transparent; border-bottom-color: transparent; box-shadow: 0 0 30px rgba(255, 0, 85, 0.4); }
+        .state-speaking .core-inner-ring { border-left-color: var(--pink); }
+        .state-speaking .core-nucleus { background: #ffccdd; box-shadow: 0 0 50px var(--pink); }
+
+        @keyframes rotate-cw { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes rotate-ccw { from { transform: rotate(360deg); } to { transform: rotate(0deg); } }
+        @keyframes pulse-nucleus { 0%, 100% { transform: scale(0.9); opacity: 0.8; } 50% { transform: scale(1.1); opacity: 1; } }
+        @keyframes pulse-fast { 0%, 100% { transform: scale(0.95); opacity: 0.9; } 50% { transform: scale(1.05); opacity: 1; } }
+
+        .status-pill { padding: 10px 30px; background: rgba(0, 0, 0, 0.8); border: 1px solid var(--cyan); color: var(--cyan); font-size: 18px; letter-spacing: 4px; font-weight: bold; text-transform: uppercase; clip-path: polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px); margin-bottom: 20px; transition: all 0.3s; text-shadow: 0 0 10px var(--cyan); }
+        .status-pill.speaking { border-color: var(--pink); color: var(--pink); text-shadow: 0 0 10px var(--pink); }
+        .status-pill.processing { border-color: var(--orange); color: var(--orange); text-shadow: 0 0 10px var(--orange); }
+
+        .log-console { flex: 1; overflow-y: auto; display: flex; flex-direction: column-reverse; font-family: var(--font-mono); font-size: 12px; min-height: 0; scrollbar-width: none; }
+        .log-console::-webkit-scrollbar { display: none; }
+        .log-line { padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.05); color: #8899aa; flex-shrink: 0; }
+        .log-line span { color: var(--cyan); margin-right: 5px; }
+        .log-line:first-child { color: #fff; text-shadow: 0 0 5px var(--cyan); border-left: 3px solid var(--cyan); padding-left: 10px; }
+
+        .stat-group { margin-bottom: 15px; }
+        .stat-header { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 5px; color: #fff; letter-spacing: 1px; }
+        .stat-track { width: 100%; height: 6px; background: rgba(255,255,255,0.1); position: relative; }
+        .stat-bar { height: 100%; background: var(--cyan); width: 0%; box-shadow: 0 0 10px var(--cyan); transition: width 0.3s; }
+        
+        .cmd-display { font-family: var(--font-mono); font-size: 14px; color: #fff; text-align: center; opacity: 1; margin-top: 10px; }
+
+        #settings-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 2000; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
+        .settings-box { width: 500px; background: #050a10; border: 1px solid var(--cyan); padding: 30px; box-shadow: 0 0 50px rgba(0, 243, 255, 0.2); }
+        .input-field { width: 100%; background: #001; border: 1px solid #334; color: #fff; padding: 10px; margin-top: 5px; margin-bottom: 15px; font-family: var(--font-mono); }
+        .btn { background: transparent; border: 1px solid var(--cyan); color: var(--cyan); padding: 10px 20px; cursor: pointer; font-family: var(--font-main); text-transform: uppercase; letter-spacing: 2px; transition: 0.2s; }
+        .btn:hover { background: var(--cyan); color: #000; }
+        .settings-trigger { position: absolute; top: 40px; right: 20px; color: var(--cyan); font-size: 20px; cursor: pointer; opacity: 0.8; transition: 0.3s; border: 1px solid transparent; padding: 5px; z-index: 200; }
+        .settings-trigger:hover { opacity: 1; border-color: var(--cyan); box-shadow: 0 0 10px var(--cyan); }
+
+        .process-list { flex: 1; overflow: hidden; display: flex; flex-direction: column; gap: 4px; font-family: var(--font-mono); font-size: 11px; }
+        .proc-row { display: flex; justify-content: space-between; border-bottom: 1px solid rgba(0, 243, 255, 0.1); padding-bottom: 2px; }
+        .proc-name { color: #fff; text-transform: uppercase; width: 70%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .proc-mem { color: var(--cyan); text-align: right; width: 30%; }
+
+    </style>
+</head>
+<body>
+
+    
+    <div class="mini-hud" id="mini-hud">
+        <div class="mini-reactor-btn" onclick="toggleCompactMode()" title="Click to Expand">
+            <div class="mini-inner"></div>
+        </div>
+    </div>
+
+    
+    <div id="full-interface">
+        <div class="app-header">
+            <div class="drag-region"></div>
+            <div class="header-title">VEGA 
+            <div class="window-controls">
+                <button class="win-btn" onclick="toggleCompactMode()" title="Mini Mode">_</button>
+                <button class="win-btn" onclick="winMax()">□</button>
+                <button class="win-btn close-btn" onclick="winClose()">X</button>
+            </div>
+        </div>
+
+        <div class="hud-wrapper">
+            
+            <div class="top-bar">
+                <div class="top-item">SYSTEM: <span>ONLINE</span></div>
+                <div class="top-item" id="clock">00:00:00</div>
+                <div class="top-item">PROJECT: <span>VEGA</span></div>
+            </div>
+            
+            <div class="settings-trigger" onclick="openSettings()">⚙</div>
+
+            
+            <div class="panel-left">
+                <div class="glass-panel" style="flex: 1;">
+                    <div class="tech-header">SYSTEM LOGS</div>
+                    <div class="log-console" id="log-content">
+                        <div class="log-line"><span>>></span> SYSTEM INITIALIZED</div>
+                    </div>
+                </div>
+            </div>
+
+            
+            <div class="center-stage">
+                <div class="status-pill" id="status-pill">LISTENING</div>
+
+                <div class="core-container" id="reactor-core">
+                    <div class="core-outer-ring"></div>
+                    <div class="core-mid-ring"></div>
+                    <div class="core-inner-ring"></div>
+                    <div class="core-nucleus"></div>
+                </div>
+                
+                <div class="cmd-display" id="cmd-text">
+                    WAITING FOR AUDIO INPUT...
+                </div>
+            </div>
+
+            
+            <div class="panel-right">
+                
+                <div class="glass-panel">
+                    <div class="tech-header">HARDWARE</div>
+                    <div class="stat-group"><div class="stat-header"><span>CPU CORE</span><span id="cpu-val">0%</span></div><div class="stat-track"><div class="stat-bar" id="cpu-bar"></div></div></div>
+                    <div class="stat-group"><div class="stat-header"><span>MEMORY</span><span id="ram-val">0GB</span></div><div class="stat-track"><div class="stat-bar" id="ram-bar"></div></div></div>
+                    <div class="stat-group"><div class="stat-header"><span>DISK USAGE</span><span id="disk-val">0%</span></div><div class="stat-track"><div class="stat-bar" id="disk-bar"></div></div></div>
+                    <div class="stat-group"><div class="stat-header"><span>NETWORK</span><span id="net-val">0 KB/s</span></div><div class="stat-track"><div class="stat-bar" id="net-bar"></div></div></div>
+                    <div class="stat-group"><div class="stat-header"><span>POWER</span><span id="bat-val">100%</span></div><div class="stat-track"><div class="stat-bar" id="bat-bar"></div></div></div>
+                </div>
+
+                
+                <div class="glass-panel">
+                    <div class="tech-header">TOP PROCESSES (CPU)</div>
+                    <div class="process-list" id="process-list">
+                        <div class="proc-row" style="color:#888;"><span>NAME</span><span>CPU %</span></div>
+                    </div>
+                </div>
+            </div>
+
+            
+            <div class="footer-bar">
+                <div class="footer-section">
+                    <div class="footer-item">UPTIME: <b id="uptime-counter">00:00:00</b></div>
+                    <div class="footer-item">SEC_LEVEL: <b>ALPHA-1</b></div>
+                </div>
+                <div class="footer-section">
+                    <div class="footer-item blink" style="color: var(--cyan);">● NETWORK SECURE</div>
+                    <div class="footer-item">VER: <b>1.0.0</b></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    
+    <div id="settings-modal">
+        <div class="settings-box">
+            <div class="tech-header">CONFIGURATION</div><br>
+            <label style="color:#aaa; font-size: 12px;">WAKE WORD</label><input type="text" id="input-wake-words" class="input-field" placeholder="Default: VEGA">
+            <label style="color:#aaa; font-size: 12px;">MICROPHONE</label><select id="input-mic" class="input-field"><option>Default</option></select>
+            <label style="color:#aaa; font-size: 12px;">KEYWORDS</label><textarea id="input-keywords" rows="3" class="input-field"></textarea>
+            <div style="display:flex; justify-content:flex-end; gap:10px;">
+                <button class="btn" onclick="closeSettings()" style="border-color: #555; color: #888;">CANCEL</button>
+                <button class="btn" onclick="saveSettings()">APPLY</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { ipcRenderer } = require('electron');
+
+        
+        let isCompact = false;
+        function toggleCompactMode() {
+            isCompact = !isCompact;
+            
+            
+            document.getElementById('full-interface').style.display = isCompact ? 'none' : 'block';
+            document.getElementById('mini-hud').style.display = isCompact ? 'flex' : 'none';
+            
+            
+            document.body.style.backgroundColor = isCompact ? 'transparent' : 'rgba(0, 0, 0, 0.8)';
+            document.body.style.backgroundImage = isCompact ? 'none' : ''; 
+
+            
+            ipcRenderer.send('app-compact-mode', isCompact);
+        }
+
+        function winMax() { ipcRenderer.send('app-maximize'); }
+        function winClose() { ipcRenderer.send('app-quit'); }
+
+        const socket = io('http:
+        const reactor = document.getElementById('reactor-core');
+        const statusPill = document.getElementById('status-pill');
+        const cmdText = document.getElementById('cmd-text');
+        const logContent = document.getElementById('log-content');
+        const procList = document.getElementById('process-list');
+        const miniBtn = document.querySelector('.mini-reactor-btn'); 
+        
+        let currentState = 'IDLE';
+        let startTime = Date.now();
+
+        setInterval(() => {
+            const now = new Date();
+            document.getElementById('clock').innerText = now.toLocaleTimeString();
+            
+            const diff = Math.floor((Date.now() - startTime) / 1000);
+            const h = Math.floor(diff / 3600).toString().padStart(2, '0');
+            const m = Math.floor((diff % 3600) / 60).toString().padStart(2, '0');
+            const s = (diff % 60).toString().padStart(2, '0');
+            document.getElementById('uptime-counter').innerText = `${h}:${m}:${s}`;
+        }, 1000);
+
+        socket.on('connect', () => { addLog("UPLINK ESTABLISHED"); addLog("CONNECTED TO CORE"); });
+
+        socket.on('toggle_hud_mode', (data) => {
+            if (isCompact !== data.state) {
+                toggleCompactMode();
+            }
+        });
+
+        socket.on('audio_level', (data) => {
+            const vol = data.level || 0;
+            const scale = 1 + (vol / 150);
+            reactor.style.transform = `scale(${scale})`;
+            if (vol > 10 && currentState === 'IDLE') reactor.style.filter = `drop-shadow(0 0 ${vol}px var(--cyan))`;
+            else if (currentState === 'SPEAKING') reactor.style.filter = `drop-shadow(0 0 ${vol+20}px var(--pink))`;
+            else reactor.style.filter = 'none';
+        });
+
+        socket.on('stats_update', (data) => {
+            document.getElementById('cpu-val').innerText = data.cpu_load + "%";
+            document.getElementById('cpu-bar').style.width = data.cpu_load + "%";
+            document.getElementById('ram-val').innerText = data.ram_usage;
+            document.getElementById('ram-bar').style.width = data.ram_percent + "%";
+            document.getElementById('bat-val').innerText = data.battery_level + "%";
+            document.getElementById('bat-bar').style.width = data.battery_level + "%";
+            document.getElementById('disk-val').innerText = (data.disk_usage || 0) + "%";
+            document.getElementById('disk-bar').style.width = (data.disk_usage || 0) + "%";
+            document.getElementById('net-val').innerText = (data.net_speed_kb || "0 KB/s");
+            document.getElementById('net-bar').style.width = (data.net_percent || 0) + "%";
+
+            updateProcessList(data.active_processes);
+
+            if (data.voice_active) setUIState('SPEAKING');
+            else if (currentState === 'SPEAKING') setUIState('LISTENING');
+        });
+
+        function updateProcessList(procs) {
+            const list = document.getElementById('process-list');
+            list.innerHTML = '<div class="proc-row" style="color:#888;"><span>NAME</span><span>CPU %</span></div>';
+            if (procs) {
+                procs.forEach(p => {
+                    const row = document.createElement('div');
+                    row.className = 'proc-row';
+                    let cleanName = p.name;
+                    if(cleanName.length > 15) cleanName = cleanName.substring(0, 15) + '..';
+                    row.innerHTML = `<span class="proc-name">${cleanName}</span> <span class="proc-mem">${p.cpu_percent.toFixed(1)}%</span>`;
+                    list.appendChild(row);
+                });
+            }
+        }
+
+        socket.on('command_recognized', (data) => {
+            cmdText.innerText = `>> ${data.command.toUpperCase()}`;
+            addLog(`CMD: ${data.command.toUpperCase()}`);
+            setUIState('PROCESSING');
+            setTimeout(() => { if (currentState === 'PROCESSING') setUIState('LISTENING'); }, 2000);
+        });
+
+        socket.on('log_update', (data) => { addLog(data.log); });
+
+        socket.on('system_shutdown', () => {
+            addLog("SHUTDOWN SEQUENCE INITIATED");
+            document.body.style.filter = "grayscale(100%)";
+            setTimeout(() => { winClose(); }, 2000);
+        });
+
+        function setUIState(newState) {
+            if (currentState === newState) return;
+            currentState = newState;
+            
+            
+            reactor.classList.remove('state-processing', 'state-speaking');
+            statusPill.classList.remove('processing', 'speaking');
+            miniBtn.classList.remove('state-processing', 'state-speaking');
+            
+            if (newState === 'LISTENING' || newState === 'IDLE') {
+                statusPill.innerText = "LISTENING";
+                statusPill.style.color = "var(--cyan)";
+                statusPill.style.borderColor = "var(--cyan)";
+                
+            } else if (newState === 'PROCESSING') {
+                reactor.classList.add('state-processing');
+                statusPill.classList.add('processing');
+                statusPill.innerText = "THINKING";
+                miniBtn.classList.add('state-processing'); 
+            } else if (newState === 'SPEAKING') {
+                reactor.classList.add('state-speaking');
+                statusPill.classList.add('speaking');
+                statusPill.innerText = "SPEAKING";
+                miniBtn.classList.add('state-speaking'); 
+            }
+        }
+
+        function addLog(msg) {
+            const lastEntry = logContent.firstElementChild;
+            if (lastEntry && lastEntry.dataset.rawMsg === msg) {
+                const time = new Date().toLocaleTimeString('en-US', {hour12: false, hour: "numeric", minute: "numeric", second: "numeric"});
+                lastEntry.innerHTML = `<span style="opacity:0.5">[${time}]</span> ${msg} <span style="font-size:10px; opacity:0.7">(x2)</span>`;
+                return;
+            }
+            const line = document.createElement('div');
+            line.className = 'log-line';
+            line.dataset.rawMsg = msg;
+            const time = new Date().toLocaleTimeString('en-US', {hour12: false, hour: "numeric", minute: "numeric", second: "numeric"});
+            line.innerHTML = `<span style="opacity:0.5">[${time}]</span> ${msg}`;
+            logContent.prepend(line);
+            if (logContent.children.length > 20) logContent.removeChild(logContent.lastChild);
+        }
+
+        function openSettings() { document.getElementById('settings-modal').style.display = 'flex'; socket.emit('get_settings'); }
+        function closeSettings() { document.getElementById('settings-modal').style.display = 'none'; }
+        
+        socket.on('settings_data', (data) => {
+            document.getElementById('input-wake-words').value = data.config.wake_words.join(", ");
+            document.getElementById('input-keywords').value = data.config.priority_keywords || "";
+            const micSelect = document.getElementById('input-mic');
+            micSelect.innerHTML = '<option value="null">Default Device</option>';
+            data.mics.forEach(mic => {
+                const opt = document.createElement('option');
+                opt.value = mic.index;
+                opt.innerText = `[${mic.index}] ${mic.name}`;
+                if (data.config.mic_index === mic.index) opt.selected = true;
+                micSelect.appendChild(opt);
+            });
+        });
+
+        function saveSettings() {
+            const wakeWordsStr = document.getElementById('input-wake-words').value;
+            const keywordsStr = document.getElementById('input-keywords').value;
+            const micVal = document.getElementById('input-mic').value;
+            const wakeWordsArr = wakeWordsStr.split(',').map(s => s.trim()).filter(s => s.length > 0);
+            socket.emit('save_settings', { wake_words: wakeWordsArr, priority_keywords: keywordsStr, mic_index: micVal === "null" ? null : parseInt(micVal), sensitivity: 300 });
+            closeSettings();
+        }
+
+        setUIState('LISTENING');
+    </script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+{
+    "wake_words": ["vega", "hello vega", "hey vega", "hi vega", "ok vega"],
+    "mic_index": 1,
+    "sensitivity": 300,
+    "priority_keywords": "Vega,hi vega, hello vega, Close, Work Mode, Clean System, System Status, Volume, Mute, Unmute, Screenshot, Open, Launch, Calculator, Notepad, Chrome, YouTube, Google, GitHub, Spotify, Discord, Teams, Settings, Camera, Stop, Exit, Shutdown, Minimize, Maximize, Snap, Switch to, Left, Right, Up, Down, Brightness, Dim, WiFi, Bluetooth, Enable, Disable, 100, 50, Percent, Play, Pause, Stop, Next, Previous, Skip, Track, Song, Hud mode, mini mode, compact mode, maximize window, full mode"
+}
