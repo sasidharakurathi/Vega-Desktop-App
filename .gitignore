@@ -4,8 +4,16 @@ __pycache__/
 *$py.class
 .venv/
 venv/
+venv_gpu/
+venv_cpu/
 env/
 *.log
+build/
+build_cpu/
+build_gpu/
+dist_cpu/
+dist_gpu/
+vega_engine.spec
 
 # --- Node.js ---
 node_modules/
@@ -14,7 +22,6 @@ out/
 .npm
 
 # --- Configuration & Secrets ---
-config.json
 .env
 keys/
 secrets/

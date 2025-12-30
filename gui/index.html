@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>NEON SYSTEM HUD 
-    <link href="https:
-    <script src="https:
+    <title>VEGA SYSTEM HUD</title>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
     
     <style>
         :root {
@@ -19,7 +19,10 @@
             --font-mono: 'Consolas', 'Monaco', monospace;
         }
 
-        * { box-sizing: border-box; }
+        * { 
+            box-sizing: border-box;
+            user-select: none;
+        }
 
         body {
             background-color: rgba(0, 0, 0, 0.8);
@@ -245,7 +248,7 @@
     <div id="full-interface">
         <div class="app-header">
             <div class="drag-region"></div>
-            <div class="header-title">VEGA 
+            <div class="header-title">VEGA // TERMINAL</div>
             <div class="window-controls">
                 <button class="win-btn" onclick="toggleCompactMode()" title="Mini Mode">_</button>
                 <button class="win-btn" onclick="winMax()">□</button>
@@ -361,7 +364,7 @@
         function winMax() { ipcRenderer.send('app-maximize'); }
         function winClose() { ipcRenderer.send('app-quit'); }
 
-        const socket = io('http:
+        const socket = io('http://127.0.0.1:5000');
         const reactor = document.getElementById('reactor-core');
         const statusPill = document.getElementById('status-pill');
         const cmdText = document.getElementById('cmd-text');

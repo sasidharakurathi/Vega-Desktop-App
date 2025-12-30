@@ -1,19 +1,50 @@
 {
-  "name": "neondesktopapp",
+  "name": "vegadesktopapp",
   "version": "1.0.0",
   "main": "main.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "electron ."
+    "start": "electron .",
+    "build-python-cpu": "python build_cpu.py",
+    "build-python-gpu": "python build_gpu.py",
+    "electron-builder": "electron-builder",
+    "cpu-dist": "npm run build-python-cpu && electron-builder",
+    "gpu-dist": "npm run build-python-gpu && electron-builder"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
+  "author": "Akurathi Sasidhar",
+  "description": "Vega AI Desktop Assistant",
   "devDependencies": {
-    "electron": "^39.2.7"
+    "electron": "^25.0.0",
+    "electron-builder": "^24.13.3"
   },
   "dependencies": {
-    "framer-motion": "^12.23.26"
+    "socket.io-client": "^4.7.0"
+  },
+  "build": {
+    "appId": "com.vega.ai.assistant",
+    "productName": "Vega AI",
+    "win": {
+      "target": "nsis",
+      "icon": "icon.ico",
+      "requestedExecutionLevel": "requireAdministrator"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "installerIcon": "icon.ico",
+      "uninstallerIcon": "icon.ico",
+      "runAfterFinish": true
+    },
+    "files": [
+      "main.js",
+      "gui/**/*",
+      "backend/server.py"
+    ],
+    "extraResources": [
+      {
+        "from": "backend/dist/vega_engine", 
+        "to": "backend/vega_engine"
+      }
+    ]
   }
 }

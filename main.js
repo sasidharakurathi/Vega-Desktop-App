@@ -5,6 +5,8 @@ const { spawn } = require('child_process');
 let mainWindow;
 let pythonProcess;
 
+const isDev = !app.isPackaged;
+
 function createWindow() {
     const { width, height } = screen.getPrimaryDisplay().bounds;
 
@@ -14,7 +16,7 @@ function createWindow() {
         x: 0,
         y: 0,
         frame: false, 
-        transparent: true, 
+        transparent: false, 
         alwaysOnTop: false, 
         hasShadow: false, 
         resizable: true, 
@@ -28,18 +30,40 @@ function createWindow() {
     mainWindow.maximize(); 
     mainWindow.show();
     mainWindow.loadFile(path.join(__dirname, 'gui', 'index.html'));
+    // mainWindow.webContents.openDevTools(); // Debug Console
 }
 
 function startPythonBackend() {
-    console.log("Starting Python backend...");
-    pythonProcess = spawn('python', ['-u', path.join(__dirname, 'backend', 'server.py')]);
+    let scriptPath;
+    let pythonCmd;
+    let args;
+
+    if (isDev) {
+        // DEVELOPMENT MODE: Run python script directly
+        console.log("Running in DEV mode");
+        pythonCmd = 'python';
+        scriptPath = path.join(__dirname, 'backend', 'server.py');
+        args = ['-u', scriptPath];
+    } else {
+        // PRODUCTION MODE: Run the compiled executable
+        console.log("Running in PROD mode");
+        // In prod, resources are moved to a special folder
+        const backendPath = path.join(process.resourcesPath, 'backend', 'vega_engine', 'vega_engine.exe');
+        pythonCmd = backendPath;
+        args = []; // No args needed for exe
+    }
+
+    console.log(`Starting Backend: ${pythonCmd}`);
+    
+    // Spawn the process
+    pythonProcess = spawn(pythonCmd, args);
 
     pythonProcess.stdout.on('data', (data) => {
-        console.log(`Python stdout: ${data}`);
+        console.log(`[PY]: ${data}`);
     });
 
     pythonProcess.stderr.on('data', (data) => {
-        console.error(`Python stderr: ${data}`);
+        console.error(`[PY ERR]: ${data}`);
     });
 }
 

@@ -1,3 +1,9 @@
+# Make sure to use Python 3.11.x Version
+
+--extra-index-url https://download.pytorch.org/whl/cu126    # torch-gpu
+# --extra-index-url https://download.pytorch.org/whl/cpu      # torch-cpu
+
+
 Flask
 flask-cors
 psutil
@@ -6,10 +12,13 @@ numpy
 SpeechRecognition
 flask-socketio
 torch
-
+torchvision
+torchaudio
 edge-tts
 pygame
 thefuzz
 pyautogui
 pygetwindow
 screen_brightness_control
+pyinstaller
+pyaudio

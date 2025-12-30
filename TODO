@@ -20,6 +20,8 @@ TODO:
 
     HUD Mode: Collapse the window into a tiny floating bar for gaming.                  -> Done
 
+    Ceate and Test Standalone Windows App  (CPU, GPU)                                   -> Done
+
     "Read my clipboard" (AI reads what you copied).
 
     "Paste this" (AI puts text into your clipboard).
