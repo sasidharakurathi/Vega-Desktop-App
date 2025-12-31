@@ -1,6 +1,6 @@
 # VEGA DESKTOP ASSISTANT
 
-![Version](https://img.shields.io/badge/version-1.0.0-cyan)
+![Version](https://img.shields.io/badge/version-1.0.1-cyan)
 ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-blue)
 ![Build](https://img.shields.io/badge/build-Electron%20%2B%20Python-green)
 
@@ -46,66 +46,53 @@ Select the version that matches your hardware.
 
 ---
 
-## 🛠️ Development Setup
+## 🛠️ Full Development Setup (Windows)
 
 ### Prerequisites
-1. **Python 3.10+** (Ensure "Add Python to PATH" is checked during installation).
-2. **Node.js & npm** (For the Electron interface).
-3. **FFmpeg**: Required for audio processing.
-   * *Download from [ffmpeg.org](https://ffmpeg.org/download.html), extract it, and add the `bin` folder to your System PATH.*
-4. **Visual C++ Redistributable**: Required for some Python libraries to compile.
+- **Python 3.10+** (3.12 recommended for Windows). Be sure to check "Add Python to PATH".
+- **Node.js & npm**.
+- **FFmpeg**: install and add `ffmpeg/bin` to your PATH.
+- **Visual C++ Redistributable**.
 
-### 1. Clone the Repository
+### Clone
 ```bash
 git clone https://github.com/sasidharakurathi/Vega-Desktop-App.git
 cd Vega-Desktop-App
 ```
 
-### 2. Python Backend Setup (Choose One)
-You must choose which version you want to develop.
+### Python Environments (pick one)
+Only one environment (CPU or GPU) is required.
 
-#### 🔴 Option A: GPU Version (Recommended for NVIDIA Users)
-Uses CUDA for faster processing. Size: ~2.5GB.
-
-```bash
-# Create virtual environment
-python -m venv venv_gpu
-
-# Activate it
-.\venv_gpu\Scripts\activate
-
-# Install GPU Dependencies
-pip install -r requirements_gpu.txt
-```
-
-#### 🔵 Option B: CPU Version (Lightweight / Laptop)
-Uses Standard CPU processing. Size: ~200MB.
-
-```bash
-# Create virtual environment
-python -m venv venv_cpu
-
-# Activate it
-.\venv_cpu\Scripts\activate
-
-# Install CPU Dependencies
+CPU (light):
+```powershell
+python -m venv .\venv_cpu
+.\venv_cpu\Scripts\Activate.ps1
 pip install -r requirements_cpu.txt
 ```
 
-### 3. Frontend Setup
+GPU (NVIDIA/CUDA):
+```powershell
+python -m venv .\venv_gpu
+.\venv_gpu\Scripts\Activate.ps1
+pip install -r requirements_gpu.txt
+```
+
+> Note: Activate the chosen venv in the **same terminal** where you run `npm start` to ensure Electron spawns the correct `python` binary for dev mode.
+
+### Frontend (Electron)
 ```bash
 npm install
 ```
 
-### 4. Running in Dev Mode
-To test the app without building it:
-
-1. Open `vega_config.json` and set `"ai_device": "auto"`.
-2. Ensure your chosen virtual environment is active in your terminal.
-3. Run:
+### Run in Dev Mode
+1. Activate your venv in the terminal.
+2. Run:
 ```bash
 npm start
 ```
+
+- In DEV mode, `main.js` spawns `python backend/server.py` automatically. You usually do not need to start the backend separately.
+- Backend listens on `127.0.0.1:5000` (Socket.IO) and emits `stats_update`, `log_update`, and `command_recognized` events.
 
 ---
 
@@ -133,60 +120,109 @@ npm run gpu-dist
 
 ## ⚙️ Configuration (vega_config.json)
 
-On the first run, Vega creates a configuration file in your User Home Directory (`C:\Users\Name\vega_config.json`). You can edit this file to customize the assistant.
+On first run Vega writes a user `vega_config.json` in your Home directory (e.g., `C:\Users\YourName\vega_config.json`). You can also edit the copy bundled with the repo (`vega_config.json`) for default values.
 
+Sample `vega_config.json`:
 ```json
 {
-    "wake_words": ["vega", "system"],
-    "priority_keywords": "Vega, Open, Close, Minimize, Status",
-    "mic_index": null,       // Set to a number (e.g., 1) if default mic fails
-    "sensitivity": 300,      // Lower = More Sensitive (e.g., 200)
-    "ai_device": "auto"      // Options: "auto", "cuda", "cpu"
+  "wake_words": ["vega", "system"],
+  "priority_keywords": "Vega, Open, Close, Minimize, Status",
+  "mic_index": null,
+  "sensitivity": 300,
+  "ai_device": "auto"
 }
 ```
+- `mic_index`: set to a number (0,1,2...) if the default microphone is wrong.
+- `sensitivity`: lower = more sensitive (try 200 if detection is poor).
+- `ai_device`: `"auto"`, `"cpu"` or `"cuda"`.
 
 ---
 
-## 🗣️ Voice Commands
+## 🗣️ Example Voice Commands (detailed)
+Use short natural phrases. Below are concrete examples with expected behavior (these are implemented in `backend/server.py`):
 
-| Category | Commands |
-|----------|----------|
-| **Core** | "Switch to GPU", "Switch to CPU", "Work Mode", "Exit System" |
-| **System** | "System Status", "Clean System", "Turn on WiFi", "Mute Volume" |
-| **Windows** | "Minimize Chrome", "Maximize Notepad", "Snap Left", "Close Spotify" |
-| **Launch** | "Open YouTube", "Launch VS Code", "Open Settings" |
-| **UI** | "Switch to Mini Mode", "Full Mode" |
-| **Media** | "Play", "Pause", "Next Song" |
+- Modes & core control
+  - "Switch to GPU" — Initialize GPU core/engine and save preference.
+  - "Switch to CPU" — Switch to CPU engine and save.
+  - "Work mode" — Engage productivity focused automation (e.g., mute notifications).
+
+- UI / HUD
+  - "Mini mode" / "HUD mode" — Enter compact 120px widget mode.
+  - "Full mode" / "Expand mode" — Restore full HUD.
+
+- Launch / navigation
+  - "Open YouTube" — Opens YouTube in default browser.
+  - "Open VS Code" — Tries to launch Visual Studio Code by name.
+
+- Window management
+  - "Minimize Chrome", "Maximize Notepad", "Close Spotify".
+  - "Snap left" / "Snap right" — Window snapping.
+  - "Switch to [app name]" — Attempts to change focus to application.
+
+- System & hardware
+  - "System status" — Spoken summary of CPU, memory, battery.
+  - "Clean system" — Runs cleanup tasks (temp files/recycle bin).
+  - "Mute volume", "Volume up", "Set brightness 50".
+  - "Turn WiFi off" / "Turn WiFi on" — Requires admin privileges.
+- Special / Easter Egg
+  - "Protocol 2026" or "Happy New Year" — Triggers the **Protocol 2026** visual sequence and spoken countdown (emits `activate_protocol_2026` in the backend).
+- Media
+  - "Play" / "Pause" / "Next" / "Previous".
+
+> Tip: If Vega doesn't recognize a phrase, try removing filler words ("please", "could you") and keep the intent short.
+
+---
+
+## 🔧 Running / Debugging
+- Run backend only (debug logs):
+```powershell
+.\venv_cpu\Scripts\Activate.ps1  # or .\venv_gpu\Scripts\Activate.ps1
+python backend/server.py
+```
+- Check Electron console/logs by running `npm start` from a terminal where the venv is active.
+- If the app won't start, verify `python` is available in your PATH (the venv python should be active for dev runs) and that `backend/dist/vega_engine` exists after builds.
+
+---
+
+## 🧪 Packaging & Build Notes
+- `build_cpu.py` / `build_gpu.py` create a PyInstaller `onedir` build at `backend/dist/vega_engine`.
+- `npm run cpu-dist` and `npm run gpu-dist` both run the respective PyInstaller script and then `electron-builder` to make the Windows installer.
+- If a runtime file is missing after install (e.g., `mel_filters.npz`), it usually means antivirus blocked a file during packaging — re-run packaging with Defender temporarily disabled.
+
+---
+
+## 🧾 Project Layout
+- `main.js` — Electron entry (starts the Python backend in dev).
+- `gui/` — HTML / assets / frontend JS.
+- `backend/server.py` — Flask + Socket.IO + voice command routing.
+- `backend/modules/` — engine components (voice, automation, launcher, window_manager, cleaner).
+- `build_cpu.py` / `build_gpu.py` — PyInstaller scripts.
+- `requirements_cpu.txt` / `requirements_gpu.txt` — pip dependency lists.
 
 ---
 
 ## ❓ Troubleshooting
+1) Voice not listening:
+- Try different `mic_index` values in `vega_config.json`.
+- Reduce `sensitivity` to 200.
 
-### 1. Voice Engine Not Listening / Deaf
-**Issue**: The "Reactor" spins, but it never processes text.
+2) Admin / hardware commands failing:
+- Run the app as Administrator (right-click -> Run as administrator).
 
-**Fix**: Check your microphone. Open `vega_config.json` in your User folder and try changing `mic_index` to `0`, `1`, or `2`. Also, try lowering `sensitivity` to `200`.
+3) Build failures / missing runtime assets:
+- Close all instances of Vega.
+- Disable Realtime AV while building.
+- Run `npm run cpu-dist` / `gpu-dist` (these ensure the Python engine is built and included).
 
-### 2. "Access Denied" for WiFi/System Commands
-**Issue**: Vega says "WiFi disabled" but nothing happens.
+4) Electron errors / stuck processes:
+- Check Task Manager for `python.exe` or `Vega` instances and kill them before retrying.
 
-**Fix**: The app needs Admin privileges to toggle hardware. Right-click the app shortcut → Run as Administrator. (The installer sets this by default, but dev mode needs manual approval).
+---
 
-### 3. Build Error: "Unable to commit changes"
-**Issue**: `npm run dist` fails at the end.
-
-**Fix**: 
-1. Close any running instances of Vega (Check Task Manager).
-2. Disable Antivirus "Real-time protection" briefly (Windows Defender often blocks the icon writer).
-3. Run VS Code / Terminal as Administrator.
-
-### 4. Error: [Errno 2] No such file ... mel_filters.npz
-**Issue**: The installed app crashes immediately.
-
-**Fix**: This means the AI assets weren't copied. Ensure you are using `npm run cpu-dist` or `npm run gpu-dist`, NOT just `electron-builder`. These scripts trigger the Python build process that fixes this path issue.
+## Contributing
+Please open issues for bugs or enhancement requests. PRs are welcome — keep them small and well-documented.
 
 ---
 
 ## 📄 License
-
-This project is open-source. Feel free to modify and distribute.
+Open-source. Feel free to modify and redistribute.
