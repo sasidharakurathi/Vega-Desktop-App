@@ -2,8 +2,25 @@
 <html>
 <head>
     <title>VEGA SYSTEM HUD</title>
-    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+    
+    
+    <link rel="stylesheet" href="libs/Rajdhani.css">
+    
+    
+    
+    <script src="libs/socket.io.min.js"></script>
+    <script src="libs/gsap.min.js"></script>
+    <script src="libs/confetti.browser.min.js"></script>
+    
+    
+    <script>
+        if (typeof gsap === 'undefined') {
+            document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"><\/script>');
+        }
+        if (typeof confetti === 'undefined') {
+            document.write('<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"><\/script>');
+        }
+    </script>
     
     <style>
         :root {
@@ -17,6 +34,41 @@
             --glass: rgba(10, 20, 30, 0.85);
             --font-main: 'Rajdhani', sans-serif;
             --font-mono: 'Consolas', 'Monaco', monospace;
+            --shake-intensity: 0px;
+        }
+
+        
+        body.theme-critical {
+            --cyan: #ff0000;
+            --cyan-dim: rgba(255, 0, 0, 0.2);
+            --blue: #ff2a2a;
+            --glass: rgba(30, 0, 0, 0.9);
+        }
+
+        
+        body.theme-neon {
+            --cyan: #d600ff; 
+            --cyan-dim: rgba(214, 0, 255, 0.1);
+            --blue: #00e5ff;
+            --pink: #ff0099;
+            --glass: rgba(20, 0, 30, 0.9);
+            background-image: 
+                linear-gradient(rgba(214, 0, 255, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 229, 255, 0.1) 1px, transparent 1px);
+        }
+
+        
+        body.theme-luxury {
+            --cyan: #ffd700; 
+            --cyan-dim: rgba(255, 215, 0, 0.15);
+            --blue: #ffffff;
+            --pink: #daa520;
+            --glass: rgba(20, 15, 5, 0.9);
+            border-color: #ffd700;
+            
+            background-image: 
+                radial-gradient(circle at center, #1a1500 0%, #000 90%),
+                repeating-linear-gradient(0deg, transparent 0px, transparent 2px, rgba(255, 215, 0, 0.05) 3px);
         }
 
         * { 
@@ -41,7 +93,17 @@
             justify-content: center;
             align-items: center;
             perspective: 1000px;
-            transition: background-color 0.5s ease;
+            transition: background-color 0.5s ease, filter 0.1s;
+        }
+
+        
+        body.shake-hard { animation: shake 0.1s infinite; }
+        @keyframes shake {
+            0% { transform: translate(2px, 2px) rotate(0deg); }
+            25% { transform: translate(-2px, -3px) rotate(-1deg); }
+            50% { transform: translate(-4px, 1px) rotate(1deg); }
+            75% { transform: translate(4px, 2px) rotate(0deg); }
+            100% { transform: translate(2px, -2px) rotate(-1deg); }
         }
 
         body::after {
@@ -50,12 +112,155 @@
             pointer-events: none; z-index: 99;
         }
 
+        
+        #blackout-curtain {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: #000; z-index: 9000; opacity: 0; pointer-events: none;
+        }
+
+        
+        #flash-layer {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: #fff; z-index: 9999; opacity: 0; pointer-events: none;
+        }
+
+        #protocol-2026-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            z-index: 9001; display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            pointer-events: none; opacity: 0;
+            overflow: hidden;
+        }
+
+        .overlay-text {
+            position: absolute;
+            font-weight: 800;
+            text-align: center;
+            opacity: 0;
+            transform: scale(0.8);
+        }
+
+        .text-critical {
+            font-size: 80px; color: #ff0000; 
+            text-shadow: 0 0 20px red;
+            letter-spacing: 10px;
+            background: rgba(0,0,0,0.8);
+            padding: 20px; border: 2px solid red;
+            clip-path: inset(0 0 0 0);
+        }
+
+        .text-neon {
+            font-size: 80px; color: #fff;
+            text-shadow: 0 0 10px #fff, 0 0 20px #d600ff, 0 0 40px #d600ff;
+            letter-spacing: 2px;
+            font-style: italic;
+            transform: skewX(-10deg);
+            z-index: 5;
+        }
+
+        .mega-year {
+            font-size: 200px; font-weight: 800; color: #ffd700;
+            text-shadow: 0 0 50px #ffd700, 0 0 100px orange;
+            letter-spacing: 20px; display: flex; gap: 10px;
+            perspective: 500px;
+        }
+        .mega-year span { display: inline-block; opacity: 0; transform-style: preserve-3d; }
+
+        .hny-text {
+            font-size: 60px; color: #fff;
+            letter-spacing: 20px; font-weight: 300;
+            margin-top: 20px; opacity: 0;
+            text-shadow: 0 0 20px #ffd700;
+            position: absolute; top: 60%;
+            width: 100%; text-align: center;
+        }
+
+        .credits-container {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            position: absolute; opacity: 0; top: 40%;
+        }
+
+        .credit-title {
+            font-size: 100px; color: #fff; font-weight: 900;
+            letter-spacing: 5px; text-shadow: 0 0 50px rgba(255,255,255,0.5);
+            margin-bottom: 20px; text-align: center;
+            line-height: 1;
+        }
+
+        .credit-sub {
+            font-size: 24px; color: #ffd700; letter-spacing: 15px;
+            font-family: var(--font-mono); border-top: 2px solid #ffd700;
+            padding-top: 15px; margin-top: 10px; text-transform: uppercase;
+        }
+
+        
+        
+        
+        .glitch-active { animation: glitch-anim 0.3s cubic-bezier(.25, .46, .45, .94) both infinite; }
+        @keyframes glitch-anim {
+            0% { transform: translate(0); }
+            20% { transform: translate(-2px, 2px); }
+            40% { transform: translate(-2px, -2px); }
+            60% { transform: translate(2px, 2px); }
+            80% { transform: translate(2px, -2px); }
+            100% { transform: translate(0); }
+        }
+
+        
+        .gold-glitch-loop {
+            animation: gold-glitch-kf 0.2s infinite;
+            color: #ffd700;
+            text-shadow: 0 0 10px #ffd700, 2px 0 #ff0000, -2px 0 #0000ff;
+            display: inline-block; 
+        }
+        @keyframes gold-glitch-kf {
+            0% { transform: translate(0); clip-path: inset(0 0 0 0); }
+            20% { transform: translate(-2px, 2px); clip-path: inset(10% 0 0 0); }
+            40% { transform: translate(2px, -2px); clip-path: inset(0 0 10% 0); }
+            60% { transform: translate(-2px, -2px); clip-path: inset(0 10% 0 0); }
+            80% { transform: translate(2px, 2px); clip-path: inset(0 0 0 10%); }
+            100% { transform: translate(0); clip-path: inset(0 0 0 0); }
+        }
+
+        
+        #scanline-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(to bottom, transparent 50%, rgba(255, 0, 0, 0.2) 51%);
+            background-size: 100% 4px;
+            animation: scanline-scroll 0.2s linear infinite;
+            opacity: 0; pointer-events: none; z-index: 1;
+        }
+        @keyframes scanline-scroll { from { transform: translateY(0); } to { transform: translateY(4px); } }
+
+        
+        #matrix-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; z-index: 0; }
+        
+        
+        .gold-shimmer span {
+            background: linear-gradient(45deg, #ffd700 30%, #fff 50%, #ffd700 70%);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: shine 3s linear infinite;
+        }
+        @keyframes shine { to { background-position: 200% center; } }
+        
+        
+        .shockwave-ring {
+            position: absolute; top: 50%; left: 50%;
+            width: 10px; height: 10px;
+            border: 10px solid #fff; border-radius: 50%;
+            transform: translate(-50%, -50%);
+            opacity: 0; pointer-events: none; z-index: 8000;
+        }
+
+        
         .mini-hud {
             display: none;
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: transparent;
             align-items: center; justify-content: center;
-            z-index: 9999;
+            z-index: 8000;
             -webkit-app-region: drag; 
         }
         
@@ -236,6 +441,44 @@
     </style>
 </head>
 <body>
+    
+    
+    <audio id="protocol-audio" src="assets/protocol_bgm.mp3" preload="auto"></audio>
+    
+    
+    <div id="blackout-curtain"></div>
+    <div id="flash-layer"></div> 
+    
+    
+    <div id="shockwave" class="shockwave-ring"></div>
+
+    <div id="protocol-2026-overlay">
+        
+        <canvas id="matrix-canvas"></canvas>
+        <div id="scanline-layer"></div>
+
+        
+        <div class="overlay-text text-critical" id="overlay-critical">
+            SYSTEM CRITICAL
+        </div>
+        
+        
+        <div class="overlay-text text-neon" id="overlay-neon">
+            // OVERRIDE_INIT
+        </div>
+
+        
+        <div class="mega-year" id="year-display">
+            <span class="d1">2</span><span class="d2">0</span><span class="d3">2</span><span class="d4">6</span>
+        </div>
+        <div class="hny-text" id="hny-text">HAPPY NEW YEAR</div>
+        
+        
+        <div class="credits-container" id="credits-container">
+            <div class="credit-title">PROJECT <span id="vega-text" style="display:inline-block">VEGA</span></div>
+            <div class="credit-sub">SYSTEM ARCHITECT // ONLINE</div>
+        </div>
+    </div>
 
     
     <div class="mini-hud" id="mini-hud">
@@ -348,16 +591,10 @@
         let isCompact = false;
         function toggleCompactMode() {
             isCompact = !isCompact;
-            
-            
             document.getElementById('full-interface').style.display = isCompact ? 'none' : 'block';
             document.getElementById('mini-hud').style.display = isCompact ? 'flex' : 'none';
-            
-            
             document.body.style.backgroundColor = isCompact ? 'transparent' : 'rgba(0, 0, 0, 0.8)';
             document.body.style.backgroundImage = isCompact ? 'none' : ''; 
-
-            
             ipcRenderer.send('app-compact-mode', isCompact);
         }
 
@@ -375,6 +612,7 @@
         let currentState = 'IDLE';
         let startTime = Date.now();
 
+        
         setInterval(() => {
             const now = new Date();
             document.getElementById('clock').innerText = now.toLocaleTimeString();
@@ -386,6 +624,7 @@
             document.getElementById('uptime-counter').innerText = `${h}:${m}:${s}`;
         }, 1000);
 
+        
         socket.on('connect', () => { addLog("UPLINK ESTABLISHED"); addLog("CONNECTED TO CORE"); });
 
         socket.on('toggle_hud_mode', (data) => {
@@ -394,6 +633,266 @@
             }
         });
 
+        
+        socket.on('activate_protocol_2026', () => {
+            triggerProtocolSequence();
+        });
+
+        let globalSpamInterval = null;
+        let matrixInterval = null;
+
+        function triggerProtocolSequence() {
+            const audio = document.getElementById('protocol-audio');
+            
+            if (globalSpamInterval) clearInterval(globalSpamInterval);
+            if (matrixInterval) clearInterval(matrixInterval);
+            audio.pause();
+            audio.currentTime = 0;
+
+            gsap.set("#blackout-curtain", { opacity: 0 });
+            gsap.set("#flash-layer", { opacity: 0 });
+            gsap.set("#shockwave", { opacity: 0, scale: 0 });
+            gsap.set("#protocol-2026-overlay", { opacity: 0 });
+            gsap.set(".overlay-text", { opacity: 0, scale: 0.8 });
+            gsap.set(".mega-year span", { opacity: 0, scale: 2, filter: "blur(20px)" });
+            gsap.set("#hny-text", { opacity: 0, y: 50 });
+            gsap.set("#credits-container", { opacity: 0 });
+            gsap.set(".credit-title", { scale: 1, opacity: 0, filter: "blur(0px)", y: 50 });
+            gsap.set(".credit-sub", { width: "0%", opacity: 0 });
+            gsap.set("#scanline-layer", { opacity: 0 });
+            gsap.set("#matrix-canvas", { opacity: 0 });
+            
+            document.getElementById('overlay-critical').classList.remove('glitch-active');
+            document.getElementById('vega-text').classList.remove('gold-glitch-loop');
+            document.getElementById('year-display').classList.remove('gold-shimmer');
+            document.body.className = ""; 
+
+            const tl = gsap.timeline({ paused: true });
+
+            const triggerFlash = () => {
+                 gsap.fromTo("#flash-layer", { opacity: 1 }, { opacity: 0, duration: 0.5, ease: "power2.out" });
+            };
+
+            
+            tl.call(() => {
+                addLog("[SYS] INITIATING PROTOCOL 2026...");
+                gsap.to("body", { backgroundColor: "rgba(0,0,0,0.95)", duration: 9 });
+            }, null, 0);
+
+            
+            tl.call(() => {
+                triggerFlash();
+                document.body.classList.add('theme-critical');
+                document.body.classList.add('shake-hard');
+                
+                gsap.set("#protocol-2026-overlay", { opacity: 1 });
+                gsap.to("#scanline-layer", { opacity: 1, duration: 0.1 });
+                
+                const errText = document.getElementById('overlay-critical');
+                gsap.fromTo(errText, 
+                    { opacity: 1, scale: 1.5, clipPath: "inset(0 100% 0 0)" },
+                    { opacity: 1, scale: 1, clipPath: "inset(0 0% 0 0)", duration: 0.1, ease: "steps(5)" }
+                );
+                errText.classList.add('glitch-active'); 
+
+                globalSpamInterval = setInterval(() => {
+                    const codes = ["0xFA21", "CRITICAL", "KERNEL PANIC", "OVERRIDE", "BUFFER_OVF", "@@##!!"];
+                    const randomCode = codes[Math.floor(Math.random() * codes.length)];
+                    addLog(`[ERR] ${randomCode} // SYSTEM UNSTABLE`);
+                    logContent.scrollTop = Math.random() * 1000;
+                }, 80);
+            }, null, 9.7);
+
+            
+            tl.call(() => {
+                triggerFlash();
+                if (globalSpamInterval) clearInterval(globalSpamInterval);
+                document.body.classList.remove('shake-hard');
+                
+                gsap.to("#overlay-critical", { opacity: 0, duration: 0.2 });
+                gsap.to("#scanline-layer", { opacity: 0, duration: 0.2 });
+                
+                document.body.classList.remove('theme-critical');
+                document.body.classList.add('theme-neon');
+                
+                const neonText = document.getElementById('overlay-neon');
+                gsap.fromTo(neonText,
+                    { scale: 0, opacity: 0, rotation: -20 },
+                    { scale: 1, opacity: 1, rotation: 0, duration: 0.8, ease: "elastic.out(1, 0.5)" }
+                );
+                
+                startMatrixRain();
+                gsap.to("#matrix-canvas", { opacity: 0.8, duration: 0.2 });
+
+                launchConfettiBurst(['#d600ff', '#00e5ff']);
+            }, null, 16.7);
+
+            
+            tl.to("#blackout-curtain", { opacity: 1, duration: 4, ease: "power2.in" }, 20.7);
+
+            
+            tl.call(() => {
+                triggerFlash();
+
+                if (matrixInterval) clearInterval(matrixInterval);
+                gsap.set("#overlay-neon", { opacity: 0 });
+                gsap.set("#matrix-canvas", { opacity: 0 });
+                gsap.set("#blackout-curtain", { opacity: 0 });
+                
+                
+                gsap.fromTo("#shockwave", 
+                    { opacity: 1, scale: 0, borderWidth: "50px" }, 
+                    { opacity: 0, scale: 5, borderWidth: "0px", duration: 0.8, ease: "power2.out" }
+                );
+                
+             
+                document.body.classList.remove('theme-neon');
+                document.body.classList.add('theme-luxury');
+                
+                
+                const yearDisplay = document.getElementById('year-display');
+                gsap.to(".mega-year span", {
+                    opacity: 1, scale: 1, filter: "blur(0px)",
+                    rotationX: 0, y: 0,
+                    duration: 1.5, stagger: 0.1,
+                    startAt: { rotationX: 90, y: -100 },
+                    ease: "back.out(1.7)",
+                    onComplete: () => {
+                        yearDisplay.classList.add('gold-shimmer'); 
+                    }
+                });
+
+                
+                gsap.fromTo("#hny-text", 
+                    { opacity: 0, y: 100, scale: 0.9 }, 
+                    { opacity: 1, y: 0, scale: 1, duration: 2, ease: "expo.out", delay: 0.3 }
+                );
+
+                
+                launchConfettiStream(['#ffd700', '#ffffff'], 18000); 
+            }, null, 26);
+
+            
+            tl.call(() => {
+                triggerFlash(); 
+                
+                gsap.to("#year-display", { opacity: 0, duration: 0.5, scale: 1.5, filter: "blur(10px)" });
+                gsap.to("#hny-text", { opacity: 0, duration: 0.5, y: 50 });
+
+                
+                const credits = document.getElementById('credits-container');
+                gsap.to(credits, { opacity: 1, duration: 0.1 }); 
+                
+                
+                gsap.fromTo(".credit-title",
+                    { opacity: 0, scale: 1.5, y: 50, filter: "blur(10px)" },
+                    { opacity: 1, scale: 1, y: 0, filter: "blur(0px)", duration: 0.1, ease: "rough({ template: none.out, strength: 1, points: 20, taper: 'none', randomize: true, clamp: false})", onComplete: () => {
+                        document.getElementById('vega-text').classList.add('gold-glitch-loop');
+                    }}
+                );
+                
+                gsap.fromTo(".credit-sub", 
+                    { width: "0%", opacity: 0 },
+                    { width: "100%", opacity: 1, duration: 1, delay: 0.5, ease: "power2.out" }
+                );
+                
+                
+                launchFireworks(14000); 
+            }, null, 44);
+
+            
+            tl.call(() => {
+                 
+                 gsap.to("#protocol-2026-overlay", { opacity: 0, duration: 2 });
+            }, null, 57);
+
+            audio.currentTime = 0.5;
+
+            const playPromise = audio.play();
+
+            if (playPromise !== undefined) {
+                playPromise.then(_ => { tl.play(); })
+                .catch(error => {
+                    console.warn("Audio blocked. Visuals only.", error);
+                    tl.play(); 
+                });
+            } else {
+                tl.play();
+            }
+        }
+
+        
+
+        function startMatrixRain() {
+            const canvas = document.getElementById('matrix-canvas');
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            
+            const katakana = 'アァカサタナハマヤャラワガザダバパイィキシチニヒミリヰギジヂビピウゥクスツヌフムユュルグズブヅプエェケセテネヘメレヱゲゼデベペオォコソトノホモヨョロヲゴゾドボポヴッン';
+            const latin = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            const nums = '0123456789';
+            const alphabet = katakana + latin + nums;
+            
+            const fontSize = 16;
+            const columns = canvas.width / fontSize;
+            const drops = [];
+
+            for(let x = 0; x < columns; x++) drops[x] = 1;
+
+            const draw = () => {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                ctx.font = fontSize + 'px monospace';
+
+                for(let i = 0; i < drops.length; i++) {
+                    const text = alphabet.charAt(Math.floor(Math.random() * alphabet.length));
+                    ctx.fillStyle = (i % 2 === 0) ? '#d600ff' : '#00e5ff'; 
+                    ctx.fillText(text, i*fontSize, drops[i]*fontSize);
+
+                    if(drops[i]*fontSize > canvas.height && Math.random() > 0.975)
+                        drops[i] = 0;
+                    
+                    drops[i]++;
+                }
+            };
+
+            if (matrixInterval) clearInterval(matrixInterval);
+            matrixInterval = setInterval(draw, 30);
+        }
+
+        function launchConfettiBurst(colors) {
+            confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: colors, zIndex: 9999 });
+        }
+
+        function launchConfettiStream(colors, duration) {
+            const end = Date.now() + duration;
+            (function frame() {
+                confetti({ particleCount: 2, angle: 60, spread: 55, origin: { x: 0 }, colors: colors, zIndex: 9999, scalar: 1.2, drift: 0.5 });
+                confetti({ particleCount: 2, angle: 120, spread: 55, origin: { x: 1 }, colors: colors, zIndex: 9999, scalar: 1.2, drift: -0.5 });
+                
+                if (Date.now() < end) requestAnimationFrame(frame);
+            }());
+        }
+
+        function launchFireworks(duration) {
+            const animationEnd = Date.now() + duration;
+            const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 9999 };
+            const randomInRange = (min, max) => Math.random() * (max - min) + min;
+
+            const interval = setInterval(function() {
+                const timeLeft = animationEnd - Date.now();
+                if (timeLeft <= 0) return clearInterval(interval);
+
+                const particleCount = 50 * (timeLeft / duration);
+                confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } }));
+                confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } }));
+            }, 250);
+        }
+
+        
         socket.on('audio_level', (data) => {
             const vol = data.level || 0;
             const scale = 1 + (vol / 150);
@@ -414,22 +913,20 @@
             document.getElementById('disk-bar').style.width = (data.disk_usage || 0) + "%";
             document.getElementById('net-val').innerText = (data.net_speed_kb || "0 KB/s");
             document.getElementById('net-bar').style.width = (data.net_percent || 0) + "%";
-
             updateProcessList(data.active_processes);
-
             if (data.voice_active) setUIState('SPEAKING');
             else if (currentState === 'SPEAKING') setUIState('LISTENING');
         });
 
         function updateProcessList(procs) {
             const list = document.getElementById('process-list');
-            list.innerHTML = '<div class="proc-row" style="color:#888;"><span>NAME</span><span>CPU %</span></div>';
+            list.innerHTML = `<div class="proc-row" style="color:#888;"><span>NAME</span><span>CPU %</span></div>`;
             if (procs) {
                 procs.forEach(p => {
                     const row = document.createElement('div');
                     row.className = 'proc-row';
                     let cleanName = p.name;
-                    if(cleanName.length > 15) cleanName = cleanName.substring(0, 15) + '..';
+                    if(cleanName.length > 15) cleanName = cleanName.substring(0,15)+"..";
                     row.innerHTML = `<span class="proc-name">${cleanName}</span> <span class="proc-mem">${p.cpu_percent.toFixed(1)}%</span>`;
                     list.appendChild(row);
                 });
@@ -444,7 +941,6 @@
         });
 
         socket.on('log_update', (data) => { addLog(data.log); });
-
         socket.on('system_shutdown', () => {
             addLog("SHUTDOWN SEQUENCE INITIATED");
             document.body.style.filter = "grayscale(100%)";
@@ -454,17 +950,13 @@
         function setUIState(newState) {
             if (currentState === newState) return;
             currentState = newState;
-            
-            
             reactor.classList.remove('state-processing', 'state-speaking');
             statusPill.classList.remove('processing', 'speaking');
             miniBtn.classList.remove('state-processing', 'state-speaking');
-            
             if (newState === 'LISTENING' || newState === 'IDLE') {
                 statusPill.innerText = "LISTENING";
                 statusPill.style.color = "var(--cyan)";
                 statusPill.style.borderColor = "var(--cyan)";
-                
             } else if (newState === 'PROCESSING') {
                 reactor.classList.add('state-processing');
                 statusPill.classList.add('processing');
@@ -519,7 +1011,6 @@
             socket.emit('save_settings', { wake_words: wakeWordsArr, priority_keywords: keywordsStr, mic_index: micVal === "null" ? null : parseInt(micVal), sensitivity: 300 });
             closeSettings();
         }
-
         setUIState('LISTENING');
     </script>
 </body>

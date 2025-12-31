@@ -151,6 +151,7 @@ def background_voice_listener():
     global last_command, latest_log
     print("[NEON] -> VOICE LOOP STARTED")
     voice.speak("System Online.")
+    time.sleep(1.5)
     
     while True:
         raw_input = voice.listen()
@@ -332,6 +333,16 @@ def background_voice_listener():
                     
                 voice.speak(msg)
                 latest_log = f"[SYS] -> {msg}"
+                
+            elif "protocol 2026" in user_input or "happy new year" in user_input:
+                # Start the Visual Sequence immediately
+                socketio.emit('activate_protocol_2026')
+                
+                voice.speak("Warning. System reconfiguration initiated. Three. Two. One.")
+                
+                time.sleep(2) 
+                
+                latest_log = "[SYS] -> PROTOCOL 2026 EXECUTED"
                 
             socketio.emit('log_update', {"log": latest_log})
             time.sleep(0.5)
